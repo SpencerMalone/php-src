@@ -3091,6 +3091,180 @@ void zend_verify_abstract_class(zend_class_entry *ce) /* {{{ */
 }
 /* }}} */
 
+void zend_verify_implicit_interface(zend_class_entry *ce) /* {{{ */
+{
+	const zend_function *func;
+	const zend_property_info *prop_info;
+
+	/* Only validate interfaces with the implicit flag */
+	if (!(ce->ce_flags & ZEND_ACC_IMPLICIT_INTERFACE)) {
+		return;
+	}
+
+	/* Check that all methods are public */
+	ZEND_HASH_MAP_FOREACH_PTR(&ce->function_table, func) {
+		if (!(func->common.fn_flags & ZEND_ACC_PUBLIC)) {
+			zend_error_noreturn(E_COMPILE_ERROR,
+				"Implicit interface %s cannot have non-public method %s",
+				ZSTR_VAL(ce->name), ZSTR_VAL(func->common.function_name));
+		}
+	} ZEND_HASH_FOREACH_END();
+
+	/* Check that all properties are public */
+	ZEND_HASH_FOREACH_PTR(&ce->properties_info, prop_info) {
+		if (!(prop_info->flags & ZEND_ACC_PUBLIC)) {
+			zend_error_noreturn(E_COMPILE_ERROR,
+				"Implicit interface %s cannot have non-public property %s",
+				ZSTR_VAL(ce->name), ZSTR_VAL(prop_info->name));
+		}
+	} ZEND_HASH_FOREACH_END();
+}
+/* }}} */
+
+/* Cache for implicit interface checks - per request */
+static HashTable *implicit_interface_cache = NULL;
+
+static void init_implicit_interface_cache(void) {
+	if (!implicit_interface_cache) {
+		implicit_interface_cache = emalloc(sizeof(HashTable));
+		zend_hash_init(implicit_interface_cache, 8, NULL, NULL, 0);
+	}
+}
+
+void zend_clear_implicit_interface_cache(void) {
+	if (implicit_interface_cache) {
+		zend_hash_destroy(implicit_interface_cache);
+		efree(implicit_interface_cache);
+		implicit_interface_cache = NULL;
+	}
+}
+
+ZEND_API bool zend_class_structurally_implements_interface(const zend_class_entry *class_ce, const zend_class_entry *interface_ce) /* {{{ */
+{
+	const zend_function *interface_func;
+	const zend_property_info *interface_prop;
+	zend_string *key;
+	zend_ulong cache_key;
+	zval *cached_result;
+
+	/* Not an implicit interface - use standard checking */
+	if (!(interface_ce->ce_flags & ZEND_ACC_IMPLICIT_INTERFACE)) {
+		return false;
+	}
+
+	/* Initialize cache if needed */
+	init_implicit_interface_cache();
+
+	/* Create cache key from class and interface pointers */
+	cache_key = ((zend_ulong)(uintptr_t)class_ce) ^ (((zend_ulong)(uintptr_t)interface_ce) << 1);
+
+	/* Check cache */
+	cached_result = zend_hash_index_find(implicit_interface_cache, cache_key);
+	if (cached_result) {
+		return Z_TYPE_P(cached_result) == IS_TRUE;
+	}
+
+	/* Cache miss - perform structural checking */
+	bool result = true;
+
+	/* Check all interface methods exist in the class with compatible signatures */
+	ZEND_HASH_MAP_FOREACH_STR_KEY_PTR(&interface_ce->function_table, key, interface_func) {
+		const zend_function *class_func = zend_hash_find_ptr(&class_ce->function_table, key);
+
+		if (!class_func) {
+			/* Method not found in class */
+			result = false;
+			goto cache_and_return;
+		}
+
+		/* Method must be public to match interface requirement */
+		if (!(class_func->common.fn_flags & ZEND_ACC_PUBLIC)) {
+			result = false;
+			goto cache_and_return;
+		}
+
+		/* Method must not be static if interface method is not static */
+		if ((class_func->common.fn_flags & ZEND_ACC_STATIC) != (interface_func->common.fn_flags & ZEND_ACC_STATIC)) {
+			result = false;
+			goto cache_and_return;
+		}
+
+		/* Use PHP's built-in signature compatibility checking */
+		inheritance_status status = zend_do_perform_implementation_check(
+			class_func, (zend_class_entry*)class_ce,
+			interface_func, (zend_class_entry*)interface_ce);
+
+		if (status != INHERITANCE_SUCCESS) {
+			/* Method signature is incompatible */
+			result = false;
+			goto cache_and_return;
+		}
+	} ZEND_HASH_FOREACH_END();
+
+	/* Check all interface properties exist in the class */
+	ZEND_HASH_MAP_FOREACH_STR_KEY_PTR(&interface_ce->properties_info, key, interface_prop) {
+		const zend_property_info *class_prop = zend_hash_find_ptr(&class_ce->properties_info, key);
+
+		if (!class_prop) {
+			/* Property not found in class */
+			result = false;
+			goto cache_and_return;
+		}
+
+		/* Property must be public to match interface requirement */
+		if (!(class_prop->flags & ZEND_ACC_PUBLIC)) {
+			result = false;
+			goto cache_and_return;
+		}
+
+		/* Check property type compatibility - for implicit interfaces, types must match exactly (invariant) */
+		if (ZEND_TYPE_IS_SET(interface_prop->type)) {
+			if (!ZEND_TYPE_IS_SET(class_prop->type)) {
+				/* Interface has type, but class property doesn't */
+				result = false;
+				goto cache_and_return;
+			}
+
+			/* Check if types are identical */
+			if (ZEND_TYPE_PURE_MASK(interface_prop->type) != ZEND_TYPE_PURE_MASK(class_prop->type)) {
+				result = false;
+				goto cache_and_return;
+			}
+
+			/* Check named types */
+			if (ZEND_TYPE_HAS_NAME(interface_prop->type)) {
+				if (!ZEND_TYPE_HAS_NAME(class_prop->type)) {
+					result = false;
+					goto cache_and_return;
+				}
+				if (ZEND_TYPE_NAME(interface_prop->type) != ZEND_TYPE_NAME(class_prop->type)) {
+					/* Names don't match - perform covariant check in both directions for invariance */
+					inheritance_status status1 = zend_perform_covariant_type_check(
+						class_prop->ce, class_prop->type, interface_prop->ce, interface_prop->type);
+					inheritance_status status2 = zend_perform_covariant_type_check(
+						interface_prop->ce, interface_prop->type, class_prop->ce, class_prop->type);
+
+					if (status1 != INHERITANCE_SUCCESS || status2 != INHERITANCE_SUCCESS) {
+						result = false;
+						goto cache_and_return;
+					}
+				}
+			}
+		}
+	} ZEND_HASH_FOREACH_END();
+
+cache_and_return:
+	/* Cache the result */
+	{
+		zval cache_val;
+		ZVAL_BOOL(&cache_val, result);
+		zend_hash_index_update(implicit_interface_cache, cache_key, &cache_val);
+	}
+
+	return result;
+}
+/* }}} */
+
 typedef struct {
 	enum {
 		OBLIGATION_DEPENDENCY,

@@ -284,6 +284,9 @@ typedef struct _zend_oparray_context {
 #define ZEND_ACC_ANON_CLASS              (1 <<  2) /*  X  |     |     |     */
 #define ZEND_ACC_ENUM                    (1 << 28) /*  X  |     |     |     */
 /*                                                        |     |     |     */
+/* Interface uses implicit (structural) typing            |     |     |     */
+#define ZEND_ACC_IMPLICIT_INTERFACE      (1 <<  5) /*  X  |     |     |     */
+/*                                                        |     |     |     */
 /* Class linked with parent, interfaces and traits        |     |     |     */
 #define ZEND_ACC_LINKED                  (1 <<  3) /*  X  |     |     |     */
 /*                                                        |     |     |     */

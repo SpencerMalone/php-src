@@ -23,6 +23,7 @@
 #include "zend_constants.h"
 #include "zend_list.h"
 #include "zend_API.h"
+#include "zend_inheritance.h"
 #include "zend_exceptions.h"
 #include "zend_builtin_functions.h"
 #include "zend_ini.h"
@@ -1387,6 +1388,9 @@ ZEND_API void zend_deactivate(void) /* {{{ */
 	if (zend_hash_num_elements(&CG(interned_strings)) > 0) {
 		zend_map_ptr_reset();
 	}
+
+	/* Clear implicit interface cache */
+	zend_clear_implicit_interface_cache();
 
 #if GC_BENCH
 	gc_bench_print();

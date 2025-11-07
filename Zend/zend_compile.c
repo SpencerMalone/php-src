@@ -9454,6 +9454,10 @@ static void zend_compile_class_decl(znode *result, const zend_ast *ast, bool top
 		zend_verify_abstract_class(ce);
 	}
 
+	if (ce->ce_flags & ZEND_ACC_INTERFACE) {
+		zend_verify_implicit_interface(ce);
+	}
+
 	CG(active_class_entry) = original_ce;
 
 	if (toplevel) {

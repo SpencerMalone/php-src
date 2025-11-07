@@ -29,6 +29,7 @@
 #include "zend_strtod.h"
 #include "zend_exceptions.h"
 #include "zend_closures.h"
+#include "zend_inheritance.h"
 
 #include <locale.h>
 #ifdef HAVE_LANGINFO_H
@@ -2560,6 +2561,12 @@ ZEND_API bool ZEND_FASTCALL zend_class_implements_interface(const zend_class_ent
 			}
 		}
 	}
+
+	/* Check for implicit interface structural matching */
+	if (interface_ce->ce_flags & ZEND_ACC_IMPLICIT_INTERFACE) {
+		return zend_class_structurally_implements_interface(class_ce, interface_ce);
+	}
+
 	return 0;
 }
 /* }}} */
@@ -2578,6 +2585,12 @@ ZEND_API bool ZEND_FASTCALL instanceof_function_slow(const zend_class_entry *ins
 				}
 			}
 		}
+
+		/* Check for implicit interface structural matching */
+		if (ce->ce_flags & ZEND_ACC_IMPLICIT_INTERFACE) {
+			return zend_class_structurally_implements_interface(instance_ce, ce);
+		}
+
 		return 0;
 	} else {
 		while (1) {

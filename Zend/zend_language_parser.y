@@ -166,6 +166,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %token <ident> T_HALT_COMPILER "'__halt_compiler'"
 %token <ident> T_CLASS         "'class'"
 %token <ident> T_TRAIT         "'trait'"
+%token <ident> T_IMPLICIT      "'implicit'"
 %token <ident> T_INTERFACE     "'interface'"
 %token <ident> T_ENUM          "'enum'"
 %token <ident> T_EXTENDS       "'extends'"
@@ -292,6 +293,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <num> returns_ref function fn is_reference is_variadic property_modifiers property_hook_modifiers
 %type <num> method_modifiers class_const_modifiers member_modifier optional_cpp_modifiers
 %type <num> class_modifiers class_modifier anonymous_class_modifiers anonymous_class_modifiers_optional use_type backup_fn_flags
+%type <num> optional_implicit
 
 %type <ptr> backup_lex_pos
 %type <str> backup_doc_comment
@@ -310,7 +312,7 @@ reserved_non_modifiers:
 	| T_FOR | T_ENDFOR | T_FOREACH | T_ENDFOREACH | T_DECLARE | T_ENDDECLARE | T_AS | T_TRY | T_CATCH | T_FINALLY
 	| T_THROW | T_USE | T_INSTEADOF | T_GLOBAL | T_VAR | T_UNSET | T_ISSET | T_EMPTY | T_CONTINUE | T_GOTO
 	| T_FUNCTION | T_CONST | T_RETURN | T_PRINT | T_YIELD | T_LIST | T_SWITCH | T_ENDSWITCH | T_CASE | T_DEFAULT | T_BREAK
-	| T_ARRAY | T_CALLABLE | T_EXTENDS | T_IMPLEMENTS | T_NAMESPACE | T_TRAIT | T_INTERFACE | T_CLASS
+	| T_ARRAY | T_CALLABLE | T_EXTENDS | T_IMPLEMENTS | T_NAMESPACE | T_TRAIT | T_IMPLICIT | T_INTERFACE | T_CLASS
 	| T_CLASS_C | T_TRAIT_C | T_FUNC_C | T_METHOD_C | T_LINE | T_FILE | T_DIR | T_NS_C | T_FN | T_MATCH | T_ENUM
 	| T_PROPERTY_C
 ;
@@ -641,9 +643,14 @@ trait_declaration_statement:
 ;
 
 interface_declaration_statement:
-		T_INTERFACE { $<num>$ = CG(zend_lineno); }
+		optional_implicit T_INTERFACE { $<num>$ = CG(zend_lineno); }
 		T_STRING interface_extends_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_INTERFACE, $<num>2, $5, zend_ast_get_str($3), NULL, $4, $7, NULL, NULL); }
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_INTERFACE | $1, $<num>3, $6, zend_ast_get_str($4), NULL, $5, $8, NULL, NULL); }
+;
+
+optional_implicit:
+		%empty          { $$ = 0; }
+	|	T_IMPLICIT      { $$ = ZEND_ACC_IMPLICIT_INTERFACE; }
 ;
 
 enum_declaration_statement:

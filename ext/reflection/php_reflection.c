@@ -4965,6 +4965,13 @@ ZEND_METHOD(ReflectionClass, isInterface)
 }
 /* }}} */
 
+/* {{{ Returns whether this is an implicit interface */
+ZEND_METHOD(ReflectionClass, isImplicitInterface)
+{
+	_class_check_flag(INTERNAL_FUNCTION_PARAM_PASSTHRU, ZEND_ACC_IMPLICIT_INTERFACE);
+}
+/* }}} */
+
 /* {{{ Returns whether this is a trait */
 ZEND_METHOD(ReflectionClass, isTrait)
 {

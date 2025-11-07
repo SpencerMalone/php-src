@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 576229f7a0c4afd2f8902db6ce87daa51256965e */
+ * Stub hash: f7d3f12e9086e292bb70a081c6789ddaf2ef5f49 */
 
 ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(arginfo_class_Reflection_getModifierNames, 0, 1, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, modifiers, IS_LONG, 0)
@@ -255,6 +255,8 @@ ZEND_END_ARG_INFO()
 #define arginfo_class_ReflectionClass_getInterfaceNames arginfo_class_ReflectionFunctionAbstract_getParameters
 
 #define arginfo_class_ReflectionClass_isInterface arginfo_class_ReflectionFunctionAbstract_inNamespace
+
+#define arginfo_class_ReflectionClass_isImplicitInterface arginfo_class_ReflectionFunctionAbstract_hasTentativeReturnType
 
 #define arginfo_class_ReflectionClass_getTraits arginfo_class_ReflectionFunctionAbstract_getParameters
 
@@ -816,6 +818,7 @@ ZEND_METHOD(ReflectionClass, getReflectionConstant);
 ZEND_METHOD(ReflectionClass, getInterfaces);
 ZEND_METHOD(ReflectionClass, getInterfaceNames);
 ZEND_METHOD(ReflectionClass, isInterface);
+ZEND_METHOD(ReflectionClass, isImplicitInterface);
 ZEND_METHOD(ReflectionClass, getTraits);
 ZEND_METHOD(ReflectionClass, getTraitNames);
 ZEND_METHOD(ReflectionClass, getTraitAliases);
@@ -1109,6 +1112,7 @@ static const zend_function_entry class_ReflectionClass_methods[] = {
 	ZEND_ME(ReflectionClass, getInterfaces, arginfo_class_ReflectionClass_getInterfaces, ZEND_ACC_PUBLIC)
 	ZEND_ME(ReflectionClass, getInterfaceNames, arginfo_class_ReflectionClass_getInterfaceNames, ZEND_ACC_PUBLIC)
 	ZEND_ME(ReflectionClass, isInterface, arginfo_class_ReflectionClass_isInterface, ZEND_ACC_PUBLIC)
+	ZEND_ME(ReflectionClass, isImplicitInterface, arginfo_class_ReflectionClass_isImplicitInterface, ZEND_ACC_PUBLIC)
 	ZEND_ME(ReflectionClass, getTraits, arginfo_class_ReflectionClass_getTraits, ZEND_ACC_PUBLIC)
 	ZEND_ME(ReflectionClass, getTraitNames, arginfo_class_ReflectionClass_getTraitNames, ZEND_ACC_PUBLIC)
 	ZEND_ME(ReflectionClass, getTraitAliases, arginfo_class_ReflectionClass_getTraitAliases, ZEND_ACC_PUBLIC)

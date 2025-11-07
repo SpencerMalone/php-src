@@ -334,6 +334,8 @@ class ReflectionClass implements Reflector
     /** @tentative-return-type */
     public function isInterface(): bool {}
 
+    public function isImplicitInterface(): bool {}
+
     /** @tentative-return-type */
     public function getTraits(): array {}
 
